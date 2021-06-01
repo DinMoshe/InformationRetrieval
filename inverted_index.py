@@ -1,20 +1,8 @@
+from aux_methods import tokenize_and_preprocess
 import xml.etree.ElementTree as ET
 import os
 import numpy as np
-
-filenames = [f"cf{num}.xml" for num in range(74, 80)]
-
-# define punctuation
-punctuation = '''!()-[]{};:'"\,<>./?@#$%^&*_~'''
-
-with open("stopwords.txt", "r") as stop_file:
-    stopwords = stop_file.readlines()
-
-
-def remove_punctuation(string):
-    for char in punctuation:
-        string = string.replace(char, "")
-    return string
+import json
 
 
 class TokenInfo:
@@ -40,7 +28,8 @@ class TokenInfo:
         else:
             self.tf_map[document_id] = 1
 
-        max_occurrences_dict[document_id] = max(max_occurrences_dict[document_id], self.tf_map[document_id])
+        max_occurrences_dict[document_id] = max(max_occurrences_dict.get(document_id, 0),
+                                                self.tf_map[document_id])
 
 
 class InvertedIndex:
@@ -51,8 +40,9 @@ class InvertedIndex:
     idf_scores: dict  # map between a token and its idf score. It is calculated after creating the inverted index.
     documents_length: dict  # a map between a document id and its length as a vector.
     max_occurrences: dict  # a map between a document id and its maximal number of occurrences of a token.
+    json_filename: str  # the name of the json file to load the index to
 
-    def __init__(self, corpus_directory: str, filenames: list):
+    def __init__(self, corpus_directory: str, filenames: list, json_filename: str):
         self.index_term_hash = dict()
         self.idf_scores = dict()
         self.documents_length = dict()
@@ -60,20 +50,16 @@ class InvertedIndex:
         self.corpus_directory = corpus_directory
         self.filenames = filenames
         self.num_documents = 0
+        self.json_filename = json_filename
 
-    def tokenize_and_preprocess(self, text, doc_id):
+    def process_text(self, text, doc_id):
         """
         :param text: text to process
         :param doc_id: document id to whom the text belongs.
         :return:
         """
-        list_words = text.split()
 
-        # remove punctuation
-        for i in range(len(list_words)):
-            list_words[i] = remove_punctuation(list_words[i])
-
-        tokens_without_stopwords = [word for word in list_words if word not in stopwords]
+        tokens_without_stopwords = tokenize_and_preprocess(text)
 
         # we update the inverted index (update self.index_term_hash)
         for token in tokens_without_stopwords:
@@ -87,10 +73,13 @@ class InvertedIndex:
 
     def build_inverted_index(self):
         """
-        :return: This method creates and saves the inverted index in a json file called "vsm_inverted_index.json"
+        :return: This method creates and saves the inverted index in a json file called self.json_filename
         """
 
         for filename in self.filenames:
+            # if self.num_documents == 5:
+            #     break
+
             tree = ET.parse(os.path.join(self.corpus_directory, filename))
             root = tree.getroot()
 
@@ -98,6 +87,7 @@ class InvertedIndex:
             for doc in documents:
                 self.num_documents += 1
                 doc_id = doc.findall("./RECORDNUM")[0].text.strip()
+                doc_id = str(int(doc_id))  # remove preceding zeros
                 self.documents_length[doc_id] = 0  # initialize the document length to 0 for afterwards
                 title = doc.findall("./TITLE")[0].text
                 list_of_text = [title]
@@ -113,12 +103,22 @@ class InvertedIndex:
                     list_of_text.append(extract[0].text)
 
                 for text in list_of_text:
-                    self.tokenize_and_preprocess(text, doc_id)
+                    self.process_text(text, doc_id)
+
+                # if self.num_documents == 5:
+                #     break
+
+        self.compute_idf()
+        self.compute_documents_length()
+
+        # now we have all the data we want
+
+        self.save_json()
 
     def compute_idf(self):
         """
             To be called only after build_inverted_index
-        :return: It calculates the idf scores for every token in self.index_term_hash dictionary.
+        :return: This method calculates the idf scores for every token in self.index_term_hash dictionary.
         """
         for token in self.index_term_hash.keys():
             df_score = self.index_term_hash[token].df_score
@@ -127,7 +127,8 @@ class InvertedIndex:
     def compute_documents_length(self):
         """
             To be called only after compute_idf
-        :return:
+        :return: This method calculates the norm (length) of each document in the corpus. It also normalizes the
+            tf scores for each token and a document by the maximal number of occurrences of a token in this document.
         """
         for token in self.index_term_hash.keys():
             idf_score = self.idf_scores[token]
@@ -135,11 +136,28 @@ class InvertedIndex:
             tf_map = token_info.tf_map
             for doc_id in tf_map.keys():
                 tf_normalized = tf_map[doc_id] / self.max_occurrences[doc_id]
+                tf_map[doc_id] = tf_normalized
                 self.documents_length[doc_id] += (idf_score * tf_normalized) ** 2
 
         for doc_id in self.documents_length.keys():
             self.documents_length[doc_id] = np.sqrt(self.documents_length[doc_id])
 
+    def save_json(self):
+        dict_to_save = {"tf": dict(),
+                        "idf": self.idf_scores,
+                        "documents_length": self.documents_length,
+                        "num_documents": self.num_documents}
+
+        for token in self.index_term_hash.keys():
+            token_info = self.index_term_hash[token]
+            dict_to_save["tf"][token] = token_info.tf_map  # reminder: token_info.tf_map is a dictionary
+
+        with open(self.json_filename, 'w') as json_file:
+            json.dump(dict_to_save, json_file, sort_keys=True, indent=4)
+
+
 # if __name__ == "__main__":
-#     index = InvertedIndex()
-#     index.build_inverted_index("./cfc-xml", ["cf74.xml"])
+#     filenames = [f"cf{num}.xml" for num in range(74, 80)]
+#     corpus_directory = "cfc-xml"
+#     index = InvertedIndex(corpus_directory, filenames, "vsm_inverted_index.json")
+#     index.build_inverted_index()
