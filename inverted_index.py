@@ -77,8 +77,6 @@ class InvertedIndex:
         """
 
         for filename in self.filenames:
-            # if self.num_documents == 5:
-            #     break
 
             tree = ET.parse(os.path.join(self.corpus_directory, filename))
             root = tree.getroot()
@@ -104,9 +102,6 @@ class InvertedIndex:
 
                 for text in list_of_text:
                     self.process_text(text, doc_id)
-
-                # if self.num_documents == 5:
-                #     break
 
         self.compute_idf()
         self.compute_documents_length()

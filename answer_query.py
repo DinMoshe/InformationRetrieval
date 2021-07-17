@@ -59,7 +59,7 @@ def answer_query(index_path, query, out_path):
         # out.writelines("\n".join(list_out))
 
 
-if __name__ == "__main__":
-    answer_query("vsm_inverted_index.json",
-                 "What are the effects of calcium on the physical properties of mucus from CF patients?",
-                 "ranked_query_docs.txt")
+# if __name__ == "__main__":
+#     answer_query("vsm_inverted_index.json",
+#                  "What are the effects of calcium on the physical properties of mucus from CF patients?",
+#                  "ranked_query_docs.txt")
