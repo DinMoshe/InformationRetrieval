@@ -1,5 +1,6 @@
 import nltk
 from nltk.corpus import stopwords
+from nltk.stem import PorterStemmer
 
 # define punctuation
 punctuation = '''!()-[]{};:'"\,<>./?@#$%^&*_~'''
@@ -28,9 +29,10 @@ def tokenize_and_preprocess(text):
 
     # to use stemming:
     # 1. from nltk.stem import PorterStemmer
-    # 2. ps = PortStemmer()
+    # 2. ps = PorterStemmer()
     # 3. replace word with ps.stem(word)
-    tokens_without_stopwords = [word for word in list_words
+    ps = PorterStemmer()
+    tokens_without_stopwords = [ps.stem(word) for word in list_words
                                 if word not in stopwords_set and word != "" and not word.isnumeric()]
 
     return tokens_without_stopwords

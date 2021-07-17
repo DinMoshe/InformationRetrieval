@@ -56,7 +56,7 @@ class InvertedIndex:
         """
         :param text: text to process
         :param doc_id: document id to whom the text belongs.
-        :return:
+        :return: it breaks the text to tokens and updates the inverted index.
         """
 
         tokens_without_stopwords = tokenize_and_preprocess(text)
