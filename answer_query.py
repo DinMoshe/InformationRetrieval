@@ -44,19 +44,22 @@ def answer_query(index_path, query, out_path):
 
     query_length = np.sqrt(query_length)
 
-    # most_similar = dict()
+    most_similar = dict()
 
     # normalize by the lengths of the query and the document
     for doc_id in cosine_similarity_dict:
         cosine_similarity_dict[doc_id] /= query_length * float(json_index_data["documents_length"][doc_id])
-        # if np.abs(cosine_similarity_dict[doc_id]) >= 0.01:
-        #     most_similar[doc_id] = cosine_similarity_dict[doc_id]
+
+    # get the maximum score in absolute value and leave only the top 4/5 scores.
+    absolute_scores = {key: abs(value) for key, value in cosine_similarity_dict.items()}
+    best_score = max(absolute_scores.values())
+    for doc_id in cosine_similarity_dict:
+        if np.abs(cosine_similarity_dict[doc_id]) >= 0.2 * best_score:
+            most_similar[doc_id] = cosine_similarity_dict[doc_id]
 
     with open(out_path, "w") as out:
-        out.writelines("\n".join(sorted(cosine_similarity_dict, key=cosine_similarity_dict.get, reverse=True)[:40]))
-        # out.writelines("\n".join(sorted(most_similar, key=most_similar.get, reverse=True)))
-        # list_out = [str(item) for item in sorted(cosine_similarity_dict.items(), key=lambda x: x[1], reverse=True)]
-        # out.writelines("\n".join(list_out))
+        # out.writelines("\n".join(sorted(cosine_similarity_dict, key=cosine_similarity_dict.get, reverse=True)[:40]))
+        out.writelines("\n".join(sorted(most_similar, key=most_similar.get, reverse=True)))
 
 
 # if __name__ == "__main__":

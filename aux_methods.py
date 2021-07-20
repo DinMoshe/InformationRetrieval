@@ -1,8 +1,8 @@
 from nltk.stem import PorterStemmer
-# import string
+import re
 
 # define punctuation
-punctuation = '''!()-[]{};:'"\,<>./?@#$%^&*_~'''
+punctuation = '''!()-[]{};:'"\,<>./?@#$%^&*_~+='''
 
 stopwords_set = {'very', 'hadn', 'mustn', 'ours', 'off', 'just', 'who', 'having', 'yours', 'not', 'if', "that'll",
                  'as', 'at', 'during', 'm', 'her', "mightn't", 'they', 'be', 'what', 'to', 'my', 'an', 'yourself',
@@ -18,14 +18,18 @@ stopwords_set = {'very', 'hadn', 'mustn', 'ours', 'off', 'just', 'who', 'having'
                  'all', 'am', 'weren', 'don', 'isn', 'were', 'same', 'shan', 'the', 'in', "isn't", 'where', 'above',
                  'up', 'here', 'through', 'themselves', 'shouldn', 'hers', 'hasn', 'himself', 'before', "you'd",
                  "wouldn't", 'these', 'so', 'its', 'his', 'is', 'are', 'some', 'wouldn', 'further', "you're", "you've",
-                 'does', 'will', "didn't", 'down', 'him', 'while', 'when', 'their', "doesn't", 'than', '+'}
+                 'does', 'will', "didn't", 'down', 'him', 'while', 'when', 'their', "doesn't", 'than'}
+
+
+def has_numbers(input_string):
+    return bool(re.search(r'\d', input_string))
 
 
 def remove_punctuation(s):
     for char in punctuation:
-        s = s.replace(char, "")
+        s = s.replace(char, " ")
     # s.translate(str.maketrans('', '', string.punctuation))
-    return s
+    return s.strip()
 
 
 def tokenize_and_preprocess(text):
@@ -33,11 +37,11 @@ def tokenize_and_preprocess(text):
     :param text: text to tokenize and preprocess
     :return: list of tokens.
     """
-    list_words = text.split()
-
     # remove punctuation
-    for i in range(len(list_words)):
-        list_words[i] = remove_punctuation(list_words[i]).lower()
+    text = remove_punctuation(text).lower()
+
+    # tokenize
+    list_words = text.split()
 
     # to use stemming:
     # 1. from nltk.stem import PorterStemmer
@@ -45,6 +49,7 @@ def tokenize_and_preprocess(text):
     # 3. replace word with ps.stem(word)
     ps = PorterStemmer()
     tokens_without_stopwords = [ps.stem(word) for word in list_words
-                                if word not in stopwords_set and word != "" and not word.isnumeric()]
+                                if word not in stopwords_set and word != "" and not has_numbers(word)
+                                and not word.isspace() and word not in punctuation]
 
     return tokens_without_stopwords
